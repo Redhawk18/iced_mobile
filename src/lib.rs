@@ -584,12 +584,12 @@ async fn run_instance<P>(
                     }
                 }
 
-                let window_theme = window
+                let _window_theme = window
                     .theme()
                     .map(conversion::theme_mode)
                     .unwrap_or_default();
 
-                let is_first = windowager.is_empty();
+                let _is_first = windowager.is_empty();
                 let window = windowager.insert(
                     id,
                     window,
@@ -1612,18 +1612,18 @@ fn run_action<'a, P, C>(
         },
         Action::System(action) => match action {
             system::Action::GetInformation(_channel) => {
-                #[cfg(feature = "sysinfo")]
-                {
-                    if let Some(compositor) = compositor {
-                        let graphics_info = compositor.information();
+                // #[cfg(feature = "sysinfo")]
+                // {
+                //     if let Some(compositor) = compositor {
+                //         let graphics_info = compositor.information();
 
-                        let _ = std::thread::spawn(move || {
-                            let information = system_information(graphics_info);
+                //         let _ = std::thread::spawn(move || {
+                //             let information = system_information(graphics_info);
 
-                            let _ = _channel.send(information);
-                        });
-                    }
-                }
+                //             let _ = _channel.send(information);
+                //         });
+                //     }
+                // }
             }
             system::Action::GetTheme(channel) => {
                 let _ = channel.send(*system_theme);

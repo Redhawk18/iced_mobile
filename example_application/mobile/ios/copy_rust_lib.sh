@@ -6,7 +6,7 @@
 set -e
 
 CONFIG="${CONFIGURATION:-Release}"
-LIB_DIR="$PROJECT_DIR/../target/ios/$CONFIG"
+LIB_DIR="$PROJECT_DIR/../../target/ios/$CONFIG"
 
 if [[ "$PLATFORM_NAME" == "iphonesimulator" ]]; then
     echo "Copying simulator library..."

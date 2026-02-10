@@ -1,0 +1,55 @@
+# Build mobile library for iOS (profile: release or debug)
+mobile profile="release":
+    #!/usr/bin/env bash
+    set -e
+
+    # Determine build profile
+    # If profile is "release" (default), check if CONFIGURATION is set (Xcode compat)
+    # This allows just mobile to pick up Xcode env if strictly needed,
+    # but sticking to explicit profile argument is safer.
+
+    # Normalize input
+    MODE="$(echo "{{ profile }}" | tr '[:upper:]' '[:lower:]')"
+
+    if [[ "$MODE" == "release" ]]; then
+        RELFLAG="--release"
+        OUT_DIR="release"
+        CONFIG_NAME="Release"
+    elif [[ "$MODE" == "debug" ]]; then
+        RELFLAG=""
+        OUT_DIR="debug"
+        CONFIG_NAME="Debug"
+    else
+        echo "Error: Unknown profile '{{ profile }}'. Use 'release' or 'debug'."
+        exit 1
+    fi
+
+    echo "🏗️  Building wihaister_mobile for iOS ($CONFIG_NAME)..."
+
+    # Xcode integration: Add SDK paths if running inside Xcode
+    if [[ -n "${DEVELOPER_SDK_DIR:-}" ]]; then
+        export LIBRARY_PATH="${DEVELOPER_SDK_DIR}/MacOSX.sdk/usr/lib:${LIBRARY_PATH:-}"
+    fi
+    # Build for device (arm64)
+    echo "Building for device (aarch64-apple-ios)"
+    cargo build $RELFLAG --package mobile --target aarch64-apple-ios || (echo "iOS Device Build Failed" && exit 1)
+
+    # Build for simulator (arm64)
+    echo "Building for simulator (aarch64-apple-ios-sim)"
+    cargo build $RELFLAG --package mobile --target aarch64-apple-ios-sim || (echo "iOS Simulator Build Failed" && exit 1)
+
+    # Create output directory structure
+    mkdir -p "../target/ios/$CONFIG_NAME/device"
+    mkdir -p "../target/ios/$CONFIG_NAME/simulator"
+
+    cp "../target/aarch64-apple-ios/$OUT_DIR/libmobile.a" \
+       "../target/ios/$CONFIG_NAME/device/libmobile.a"
+
+    cp "../target/aarch64-apple-ios-sim/$OUT_DIR/libmobile.a" \
+       "../target/ios/$CONFIG_NAME/simulator/libmobile.a"
+
+    echo "Build complete!"
+
+# Installs iOS targets
+install_ios_targets:
+    rustup target add aarch64-apple-ios aarch64-apple-ios-sim
