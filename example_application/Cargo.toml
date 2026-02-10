@@ -1,0 +1,20 @@
+[package]
+name = "iced_application"
+publish = false
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+iced = { version = "0.14.0", features = ["tokio", "lazy", "webgl", "fira-sans", "canvas", "image", "markdown", "advanced"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+wasm-bindgen = "0.2"
+wasmtimer ="0.4.3"
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
+opt-level = "z"  # Optimize for size.
+lto = true  # Enable link time optimization
+panic = "abort"

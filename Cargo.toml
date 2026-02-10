@@ -1,0 +1,37 @@
+[package]
+name = "iced_mobile"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = ["example_application", "example_application/mobile"]
+
+[dependencies]
+iced = { version = "0.14.0", features = ["wgpu", "tokio", "lazy", "fira-sans", "canvas", "image", "markdown", "advanced"] }
+iced_wgpu = "0.14"
+iced_winit = "0.14"
+iced_renderer = "0.14"
+iced_runtime = "0.14"
+iced_program = "0.14"
+rustc-hash = "2.1.1"
+winit = { version = "0.30", features = ["rwh_06"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { version = "0.6", features = ["native-activity"] }
+winit = { version = "0.30", features = ["android-native-activity"] }
+
+[package.metadata.android]
+package = "org.iced.example"
+apk_name = "example"
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+
+[package.metadata.android.sdk]
+target_sdk_version = 33
+
+[profile.release]
+strip = true  # Automatically strip symbols from the binary.
+opt-level = "z"  # Optimize for size.
+lto = true  # Enable link time optimization
+panic = "abort"

@@ -1,0 +1,4 @@
+// Conditional library path based on SDK — picks the correct device/simulator static library
+RUST_LIB_PATH[sdk=iphoneos*] = $(PROJECT_DIR)/../../../target/aarch64-apple-ios/$(CONFIGURATION)
+RUST_LIB_PATH[sdk=iphonesimulator*] = $(PROJECT_DIR)/../target/ios/$(CONFIGURATION)/simulator
+LIBRARY_SEARCH_PATHS = $(inherited) $(RUST_LIB_PATH)
