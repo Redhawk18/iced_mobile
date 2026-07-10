@@ -7,7 +7,6 @@ use iced::advanced::widget::operation;
 use iced::advanced::{Renderer, renderer};
 use iced::futures::channel::{mpsc, oneshot};
 use iced::futures::{StreamExt, task};
-use iced::touch::Finger;
 use iced::{Error, Executor, Program, Task, theme};
 use iced_renderer;
 use iced_runtime::{Action, image, system};
@@ -533,6 +532,13 @@ async fn run_instance<P>(
                         async move {
                             let shell = Shell::new(proxy.clone());
                             use iced_renderer::graphics::Compositor;
+                            // Metal only exists on Apple platforms. Forcing it
+                            // on Android leaves wgpu with no usable backend, so
+                            // it finds no adapter and silently falls back to the
+                            // (extremely slow) tiny_skia software renderer.
+                            // Leave the backend unset elsewhere so wgpu picks
+                            // Vulkan/GLES on Android.
+                            #[cfg(any(target_os = "ios", target_os = "macos"))]
                             unsafe {
                                 _ = std::env::set_var("WGPU_BACKEND", "Metal");
                             }
@@ -875,6 +881,26 @@ async fn run_instance<P>(
                             ..
                         } = state
                         {
+                            // On Android/iOS the loop renders on demand and a
+                            // bare `request_redraw()` does not reliably wake it,
+                            // so an ongoing animation (scroll/fling) that keeps
+                            // asking for `NextFrame` would stall. Keep the loop
+                            // in `Poll` while more frames are wanted and return
+                            // to `Wait` once it settles (self-terminating).
+                            #[cfg(any(target_os = "android", target_os = "ios"))]
+                            {
+                                let flow = if matches!(
+                                    redraw_request,
+                                    window::RedrawRequest::NextFrame
+                                ) {
+                                    ControlFlow::Poll
+                                } else {
+                                    ControlFlow::Wait
+                                };
+                                let _ = control_sender
+                                    .start_send(Control::ChangeFlow(flow));
+                            }
+
                             window.request_redraw(redraw_request);
                             window.request_input_method(input_method);
                             window.update_mouse(mouse_interaction);
@@ -978,44 +1004,6 @@ async fn run_instance<P>(
                                     runtime
                                         .broadcast(subscription::Event::SystemThemeChanged(mode));
                                 }
-                            }
-                            winit::event::WindowEvent::Touch(touch) => {
-                                let finger_id = Finger(touch.id);
-                                let position = iced::Point::new(
-                                    touch.location.x as f32,
-                                    touch.location.y as f32,
-                                );
-                                let touch_event = match touch.phase {
-                                    winit::event::TouchPhase::Started => {
-                                        iced::touch::Event::FingerPressed {
-                                            id: finger_id,
-                                            position,
-                                        }
-                                    }
-                                    winit::event::TouchPhase::Ended
-                                    | winit::event::TouchPhase::Cancelled => {
-                                        iced::touch::Event::FingerLifted {
-                                            id: finger_id,
-                                            position,
-                                        }
-                                    }
-                                    winit::event::TouchPhase::Moved => {
-                                        iced::touch::Event::FingerMoved {
-                                            id: finger_id,
-                                            position,
-                                        }
-                                    }
-                                };
-
-                                tracing::debug!(
-                                    "Touch event: id={:?}, phase={:?}, position={:?}",
-                                    finger_id,
-                                    touch.phase,
-                                    position
-                                );
-                                events.push((id, iced::Event::Touch(touch_event)));
-
-                                window.state.update(&program, &window.raw, &window_event);
                             }
                             _ => {}
                         }
